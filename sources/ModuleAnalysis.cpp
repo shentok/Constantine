@@ -206,7 +206,7 @@ private:
     }
 
     void OnCXXMethodDecl(clang::CXXMethodDecl const * const F) override {
-        for (auto && Variable: GetVariablesFromContext(F, (! IsJustAMethod(F)))) {
+        for (auto && Variable: GetVariablesFromContext(F, IsJustAMethod(F))) {
             Results.insert(Variable);
         }
         clang::CXXRecordDecl const * const Parent = F->getParent();
@@ -276,7 +276,7 @@ private:
         Variables const MemberVariables = GetMemberVariablesAndReferences(RecordDecl, F);
         // check variables first,
         ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()));
-        for (auto && Variable: GetVariablesFromContext(F, (! IsJustAMethod(F)))) {
+        for (auto && Variable: GetVariablesFromContext(F, IsJustAMethod(F))) {
             State.Eval(Analysis, Variable);
         }
         for (auto && Variable: MemberVariables) {
