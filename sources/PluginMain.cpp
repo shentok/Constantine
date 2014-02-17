@@ -54,6 +54,7 @@ public:
         : boost::noncopyable()
         , clang::PluginASTAction()
         , Debug(PseudoConstness)
+        , WithArgs(true)
     { }
 
 private:
@@ -66,7 +67,7 @@ private:
     // ..:: Entry point for plugins ::..
     clang::ASTConsumer * CreateASTConsumer(clang::CompilerInstance & C, llvm::StringRef) {
         return IsCPlusPlus(C)
-            ? (clang::ASTConsumer *) new ModuleAnalysis(C, Debug)
+            ? (clang::ASTConsumer *) new ModuleAnalysis(C, Debug, WithArgs)
             : (clang::ASTConsumer *) new NullConsumer();
     }
 
@@ -94,15 +95,22 @@ private:
                         clEnumVal(VariableUsages, "Enable variable usage detection"),
                         clEnumValEnd));
 
+            static llvm::cl::opt<bool> const
+                WithArgsParser("with-args",
+                               llvm::cl::desc("Whether parameters should be checked as well"),
+                               llvm::cl::init(true));
+
             llvm::cl::ParseCommandLineOptions(ArgPtrs.size(), &ArgPtrs.front());
 
             Debug = DebugParser;
+            WithArgs = WithArgsParser;
         }
         return true;
     }
 
 private:
     Target Debug;
+    bool WithArgs;
 };
 
 } // namespace anonymous

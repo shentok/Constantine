@@ -151,7 +151,7 @@ class ModuleVisitor
     , public clang::RecursiveASTVisitor<ModuleVisitor> {
 public:
     typedef std::auto_ptr<ModuleVisitor> Ptr;
-    static ModuleVisitor::Ptr CreateVisitor(Target);
+    static ModuleVisitor::Ptr CreateVisitor(Target, bool const WithArgs);
 
     virtual ~ModuleVisitor()
     { }
@@ -203,14 +203,19 @@ protected:
 
 class DebugVariableDeclarations
     : public ModuleVisitor {
+public:
+    DebugVariableDeclarations(bool const WithArgs) :
+        WithArgs(WithArgs) {
+    }
+
 private:
     void OnFunctionDecl(clang::FunctionDecl const * const F) {
-        boost::copy(GetVariablesFromContext(F),
+        boost::copy(GetVariablesFromContext(F, WithArgs),
             std::insert_iterator<Variables>(Result, Result.begin()));
     }
 
     void OnCXXMethodDecl(clang::CXXMethodDecl const * const F) {
-        boost::copy(GetVariablesFromContext(F, IsJustAMethod(F)),
+        boost::copy(GetVariablesFromContext(F, WithArgs && IsJustAMethod(F)),
             std::insert_iterator<Variables>(Result, Result.begin()));
         boost::copy(GetVariablesFromRecord(F->getParent()->getCanonicalDecl()),
             std::insert_iterator<Variables>(Result, Result.begin()));
@@ -222,6 +227,7 @@ private:
     }
 
 private:
+    bool const WithArgs;
     Variables Result;
 };
 
@@ -258,20 +264,25 @@ private:
 
 class AnalyseVariableUsage
     : public ModuleVisitor {
+public:
+    AnalyseVariableUsage(bool const WithArgs) :
+        WithArgs(WithArgs) {
+    }
+
 private:
     void OnFunctionDecl(clang::FunctionDecl const * const F) {
         ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()));
-        boost::for_each(GetVariablesFromContext(F),
+        boost::for_each(GetVariablesFromContext(F, WithArgs),
             std::bind(&PseudoConstnessAnalysisState::Eval, &State, std::cref(Analysis), std::placeholders::_1));
     }
 
     void OnCXXMethodDecl(clang::CXXMethodDecl const * const F) {
         clang::CXXRecordDecl const * const RecordDecl =
             F->getParent()->getCanonicalDecl();
-        Variables const MemberVariables = GetMemberVariablesAndReferences(RecordDecl, F);
+        Variables const MemberVariables = GetMemberVariablesAndReferences(RecordDecl, F, WithArgs);
         // check variables first,
         ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()));
-        boost::for_each(GetVariablesFromContext(F, IsJustAMethod(F)),
+        boost::for_each(GetVariablesFromContext(F, WithArgs && IsJustAMethod(F)),
             std::bind(&PseudoConstnessAnalysisState::Eval, &State, std::cref(Analysis), std::placeholders::_1));
         boost::for_each(MemberVariables,
             std::bind(&PseudoConstnessAnalysisState::Eval, &State, std::cref(Analysis), std::placeholders::_1));
@@ -332,39 +343,41 @@ private:
     };
 
 private:
+    bool const WithArgs;
     PseudoConstnessAnalysisState State;
     Methods ConstCandidates;
     Methods StaticCandidates;
 };
 
 
-ModuleVisitor::Ptr ModuleVisitor::CreateVisitor(Target const State) {
+ModuleVisitor::Ptr ModuleVisitor::CreateVisitor(Target const State, bool const WithArgs) {
     switch (State) {
     case FuncionDeclaration :
         return ModuleVisitor::Ptr( new DebugFunctionDeclarations() );
     case VariableDeclaration :
-        return ModuleVisitor::Ptr( new DebugVariableDeclarations() );
+        return ModuleVisitor::Ptr( new DebugVariableDeclarations(WithArgs) );
     case VariableChanges:
         return ModuleVisitor::Ptr( new DebugVariableChanges() );
     case VariableUsages :
         return ModuleVisitor::Ptr( new DebugVariableUsages() );
     case PseudoConstness :
-        return ModuleVisitor::Ptr( new AnalyseVariableUsage() );
+        return ModuleVisitor::Ptr( new AnalyseVariableUsage(WithArgs) );
     }
 }
 
 } // namespace anonymous
 
 
-ModuleAnalysis::ModuleAnalysis(clang::CompilerInstance const & Compiler, Target const T)
+ModuleAnalysis::ModuleAnalysis(clang::CompilerInstance const & Compiler, Target const T, bool const WithArgs)
     : boost::noncopyable()
     , clang::ASTConsumer()
     , Reporter(Compiler.getDiagnostics())
     , State(T)
+    , WithArgs(WithArgs)
 { }
 
 void ModuleAnalysis::HandleTranslationUnit(clang::ASTContext & Ctx) {
-    ModuleVisitor::Ptr const V = ModuleVisitor::CreateVisitor(State);
+    ModuleVisitor::Ptr const V = ModuleVisitor::CreateVisitor(State, WithArgs);
     V->TraverseDecl(Ctx.getTranslationUnitDecl());
     V->Dump(Reporter);
 }

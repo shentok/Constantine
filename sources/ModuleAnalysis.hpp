@@ -36,11 +36,12 @@ enum Target
 // It runs the pseudo const analysis on the given translation unit.
 class ModuleAnalysis : public boost::noncopyable, public clang::ASTConsumer {
 public:
-    ModuleAnalysis(clang::CompilerInstance const &, Target);
+    ModuleAnalysis(clang::CompilerInstance const &, Target, bool const WithArgs);
 
     void HandleTranslationUnit(clang::ASTContext &);
 
 private:
     clang::DiagnosticsEngine & Reporter;
     Target const State;
+    bool const WithArgs;
 };

@@ -188,9 +188,9 @@ Variables GetReferedVariables(clang::DeclaratorDecl const * const D) {
     return Result;
 }
 
-Variables GetMemberVariablesAndReferences(clang::CXXRecordDecl const * const Rec, clang::DeclContext const * const F) {
+Variables GetMemberVariablesAndReferences(clang::CXXRecordDecl const * const Rec, clang::DeclContext const * const F, bool WithArgs) {
     Variables Members = GetVariablesFromRecord(Rec);
-    Variables const & Locals = GetVariablesFromContext(F);
+    Variables const & Locals = GetVariablesFromContext(F, WithArgs);
     for (auto const &Local : Locals) {
         Variables const &Refs = GetReferedVariables(Local);
         for (auto ReIt(Refs.begin()), ReEnd(Refs.end()); ReIt != ReEnd; ++ReIt) {
