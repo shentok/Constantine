@@ -33,7 +33,7 @@
 // if they are never written to, implying that they constant.
 class ScopeAnalysis {
 public:
-    static ScopeAnalysis AnalyseThis(clang::Stmt const &);
+    static ScopeAnalysis AnalyseThis(clang::Stmt const &, clang::QualType const &);
 
     bool WasChanged(clang::DeclaratorDecl const *) const;
     bool WasReferenced(clang::DeclaratorDecl const *) const;

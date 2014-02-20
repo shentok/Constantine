@@ -230,7 +230,7 @@ class DebugVariableUsages
     : public DebugFunctionDeclarations {
 private:
     static void ReportVariableUsage(clang::DiagnosticsEngine & DE, clang::FunctionDecl const * const F) {
-        ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()));
+        ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()), F->getResultType());
         Analysis.DebugReferenced(DE);
     }
 
@@ -245,7 +245,7 @@ class DebugVariableChanges
     : public DebugFunctionDeclarations {
 private:
     static void ReportVariableUsage(clang::DiagnosticsEngine & DE, clang::FunctionDecl const * const F) {
-        ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()));
+        ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()), F->getResultType());
         Analysis.DebugChanged(DE);
     }
 
@@ -260,7 +260,7 @@ class AnalyseVariableUsage
     : public ModuleVisitor {
 private:
     void OnFunctionDecl(clang::FunctionDecl const * const F) {
-        ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()));
+        ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()), F->getResultType());
         boost::for_each(GetVariablesFromContext(F),
             std::bind(&PseudoConstnessAnalysisState::Eval, &State, std::cref(Analysis), std::placeholders::_1));
     }
@@ -270,7 +270,7 @@ private:
             F->getParent()->getCanonicalDecl();
         Variables const MemberVariables = GetMemberVariablesAndReferences(RecordDecl, F);
         // check variables first,
-        ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()));
+        ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()), F->getResultType());
         boost::for_each(GetVariablesFromContext(F, (! IsJustAMethod(F))),
             std::bind(&PseudoConstnessAnalysisState::Eval, &State, std::cref(Analysis), std::placeholders::_1));
         boost::for_each(MemberVariables,

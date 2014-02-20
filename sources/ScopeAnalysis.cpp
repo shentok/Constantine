@@ -33,9 +33,10 @@ namespace {
 class VariableChangeCollector
     : public clang::RecursiveASTVisitor<VariableChangeCollector> {
 public:
-    VariableChangeCollector(UsageRefsMap & Out)
+    VariableChangeCollector(UsageRefsMap & Out, clang::QualType const & ReturnType)
         : clang::RecursiveASTVisitor<VariableChangeCollector>()
         , Results(Out)
+        , ReturnType(ReturnType)
     { }
 
 public:
@@ -124,6 +125,15 @@ public:
         return true;
     }
 
+    bool VisitStmt(clang::Stmt *S) {
+        if (clang::dyn_cast<clang::ReturnStmt const>(S)) {
+            S->dump();
+            ReturnType.dump();
+        }
+
+        return true;
+    }
+
 private:
     static bool IsNonConstReferenced(clang::QualType const & Decl) {
         return
@@ -147,6 +157,7 @@ public:
 
 private:
     UsageRefsMap & Results;
+    clang::QualType const & ReturnType;
 };
 
 // Collect all variables which were accessed in the given scope.
@@ -185,10 +196,10 @@ private:
 
 } // namespace anonymous
 
-ScopeAnalysis ScopeAnalysis::AnalyseThis(clang::Stmt const & Stmt) {
+ScopeAnalysis ScopeAnalysis::AnalyseThis(clang::Stmt const & Stmt, clang::QualType const & ReturnType) {
     ScopeAnalysis Result;
     {
-        VariableChangeCollector Visitor(Result.Changed);
+        VariableChangeCollector Visitor(Result.Changed, ReturnType);
         Visitor.TraverseStmt(const_cast<clang::Stmt*>(&Stmt));
     }
     {
@@ -209,7 +220,7 @@ bool ScopeAnalysis::WasReferenced(clang::DeclaratorDecl const * const Decl) cons
 void ScopeAnalysis::DebugChanged(clang::DiagnosticsEngine & DE) const {
     ScopeAnalysis Copy = *this;
     {
-        VariableChangeCollector const Visitor(Copy.Changed);
+        VariableChangeCollector const Visitor(Copy.Changed, clang::QualType());
         Visitor.Report(DE);
     }
 }
