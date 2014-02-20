@@ -26,7 +26,12 @@
 #include <map>
 
 #include <clang/AST/AST.h>
+#include <clang/AST/RecursiveASTVisitor.h>
 #include <clang/Basic/Diagnostic.h>
+
+namespace clang {
+    class ParentMap;
+}
 
 
 // This class tracks the usage of variables in a statement body to see
@@ -44,4 +49,17 @@ public:
 private:
     UsageRefsMap Changed;
     UsageRefsMap Used;
+};
+
+class MethodAnalysis : public clang::RecursiveASTVisitor<MethodAnalysis> {
+public:
+    MethodAnalysis(clang::ParentMap const * ParentMap);
+
+    bool VisitCXXThisExpr(clang::CXXThisExpr const * const);
+
+    bool isConst() const;
+
+private:
+    clang::ParentMap const * const m_parentMap;
+    bool m_isConst;
 };

@@ -29,6 +29,7 @@
 #include <memory>
 
 #include <clang/AST/AST.h>
+#include <clang/AST/ParentMap.h>
 #include <clang/AST/RecursiveASTVisitor.h>
 
 #include <boost/noncopyable.hpp>
@@ -289,15 +290,10 @@ private:
             }
             else if (! F->isConst()) {
                 // check for constness
-                Methods const MemberFunctions = GetMethodsFromRecord(RecordDecl);
-                unsigned int const MemberChanges =
-                    boost::count_if(MemberVariables,
-                        std::bind(&ScopeAnalysis::WasChanged, &Analysis, std::placeholders::_1));
-                unsigned int const FunctionChanges =
-                    boost::count_if(
-                        MemberFunctions | boost::adaptors::filtered(IsMutatingMethod()),
-                        std::bind(&ScopeAnalysis::WasReferenced, &Analysis, std::placeholders::_1));
-                if ((0 == MemberChanges) && (0 == FunctionChanges)) {
+                const clang::ParentMap ParentMap(F->getBody());
+                MethodAnalysis Analysis(&ParentMap);
+                Analysis.TraverseStmt(F->getBody());
+                if (Analysis.isConst()) {
                     ConstCandidates.insert(F);
                 }
             }

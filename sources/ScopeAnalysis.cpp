@@ -20,6 +20,7 @@
 #include "ScopeAnalysis.hpp"
 #include "IsCXXThisExpr.hpp"
 
+#include <clang/AST/ParentMap.h>
 #include <clang/AST/RecursiveASTVisitor.h>
 
 #include <boost/range.hpp>
@@ -220,4 +221,76 @@ void ScopeAnalysis::DebugReferenced(clang::DiagnosticsEngine & DE) const {
         VariableAccessCollector const Visitor(Copy.Used);
         Visitor.Report(DE);
     }
+}
+
+
+MethodAnalysis::MethodAnalysis(const clang::ParentMap *ParentMap) :
+    m_parentMap(ParentMap),
+    m_isConst(true)
+{
+}
+
+bool MethodAnalysis::VisitCXXThisExpr(clang::CXXThisExpr const * const CXXThisExpr)
+{
+    clang::Stmt const * Stmt = m_parentMap->getParent(CXXThisExpr);
+
+    for (; Stmt != 0 && m_isConst; Stmt = m_parentMap->getParent(Stmt)) {
+        clang::Expr const * Expr = 0;
+
+        if (clang::ImplicitCastExpr const * const ImplicitCastExpr = clang::dyn_cast<clang::ImplicitCastExpr const>(Stmt)) {
+            Expr = ImplicitCastExpr;
+        }
+        else if (clang::UnaryOperator const * const UnaryOperator = clang::dyn_cast<clang::UnaryOperator const>(Stmt)) {
+            if (UnaryOperator->getOpcode() != clang::UO_AddrOf && UnaryOperator->getOpcode() != clang::UO_Deref) {
+                break;
+            }
+
+            Expr = UnaryOperator;
+        }
+        else if (clang::MemberExpr const * const MemberExpr = clang::dyn_cast<clang::MemberExpr const>(Stmt)) {
+            if (clang::CXXMethodDecl const * const CXXMethodDecl = clang::dyn_cast<clang::CXXMethodDecl const>(MemberExpr->getMemberDecl())) {
+                m_isConst &= CXXMethodDecl->isConst();
+                return true;
+            }
+
+            if (!clang::dyn_cast<clang::FieldDecl const>(MemberExpr->getMemberDecl())) {
+                break;
+            }
+
+            Expr = MemberExpr;
+        }
+        else {
+            break;
+        }
+
+        if (Expr->getType().getTypePtr()->isReferenceType()) {
+            if (Expr->getType().isConstQualified()) {
+                return true;
+            }
+        }
+        else if (Expr->getType().getTypePtr()->isPointerType()) {
+            if (Expr->getType().getTypePtr()->getPointeeType().isConstQualified() && Expr->isRValue()) {
+                return true;
+            }
+        }
+        else if (clang::dyn_cast<clang::BuiltinType const >(Expr->getType().getTypePtr())) {
+            if (Expr->isRValue()) {
+                return true;
+            }
+            else if (Expr->getType().isConstQualified()) {
+                return true;
+            }
+        }
+        else {
+            break;
+        }
+    }
+
+    m_isConst = false;
+    return false;
+}
+
+bool MethodAnalysis::isConst() const
+{
+    return m_isConst;
 }
