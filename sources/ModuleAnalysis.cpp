@@ -283,29 +283,21 @@ private:
             F->isUserProvided() &&
             IsJustAMethod(F)
         ) {
-            Methods const MemberFunctions = GetMethodsFromRecord(RecordDecl);
-            // check the constness first..
-            unsigned int const MemberChanges =
-                boost::count_if(MemberVariables,
-                    std::bind(&ScopeAnalysis::WasChanged, &Analysis, std::placeholders::_1));
-            unsigned int const FunctionChanges =
-                boost::count_if(
-                    MemberFunctions | boost::adaptors::filtered(IsMutatingMethod()),
-                    std::bind(&ScopeAnalysis::WasReferenced, &Analysis, std::placeholders::_1));
-            // if it looks const, it might be even static..
-            if ((0 == MemberChanges) && (0 == FunctionChanges)) {
-                unsigned int const MemberAccess =
+            if (! IsCXXThisExpr::Check(F->getBody())) {
+                // if method lacks CXXThisExpr it may be declared static
+                StaticCandidates.insert(F);
+            }
+            else if (! F->isConst()) {
+                // check for constness
+                Methods const MemberFunctions = GetMethodsFromRecord(RecordDecl);
+                unsigned int const MemberChanges =
                     boost::count_if(MemberVariables,
-                        std::bind(&ScopeAnalysis::WasReferenced, &Analysis, std::placeholders::_1));
-                unsigned int const FunctionAccess =
+                        std::bind(&ScopeAnalysis::WasChanged, &Analysis, std::placeholders::_1));
+                unsigned int const FunctionChanges =
                     boost::count_if(
-                        MemberFunctions | boost::adaptors::filtered(IsMemberMethod()),
+                        MemberFunctions | boost::adaptors::filtered(IsMutatingMethod()),
                         std::bind(&ScopeAnalysis::WasReferenced, &Analysis, std::placeholders::_1));
-                if ((0 == MemberAccess) && (0 == FunctionAccess) &&
-                    (! IsCXXThisExpr::Check(F->getBody()))
-                ) {
-                    StaticCandidates.insert(F);
-                } else if (! F->isConst()) {
+                if ((0 == MemberChanges) && (0 == FunctionChanges)) {
                     ConstCandidates.insert(F);
                 }
             }
@@ -324,12 +316,6 @@ private:
     struct IsMutatingMethod {
         bool operator()(clang::CXXMethodDecl const * const F) const {
             return (! F->isStatic()) && (! F->isConst());
-        }
-    };
-
-    struct IsMemberMethod {
-        bool operator()(clang::CXXMethodDecl const * const F) const {
-            return (! F->isStatic());
         }
     };
 
