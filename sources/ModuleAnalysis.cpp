@@ -277,12 +277,14 @@ private:
             }
             else if (! F->isConst()) {
                 // check for constness
+                F->dump();
                 const clang::ParentMap ParentMap(F->getBody());
                 MethodAnalysis Analysis(&ParentMap);
                 Analysis.TraverseStmt(F->getBody());
                 if (Analysis.isConst()) {
                     ConstCandidates.insert(F);
                 }
+                llvm::errs() << "----->" << Analysis.isConst() << "\n";
             }
         }
     }

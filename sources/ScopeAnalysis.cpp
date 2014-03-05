@@ -260,6 +260,7 @@ bool MethodAnalysis::VisitCXXThisExpr(clang::CXXThisExpr const * const CXXThisEx
             Expr = MemberExpr;
         }
         else {
+            llvm::errs() << "Unknown parent statement \n";
             break;
         }
 
@@ -273,12 +274,18 @@ bool MethodAnalysis::VisitCXXThisExpr(clang::CXXThisExpr const * const CXXThisEx
                 return true;
             }
         }
-        else if (clang::dyn_cast<clang::BuiltinType const >(Expr->getType().getTypePtr())) {
+        else if (clang::BuiltinType const * const BuiltinType = clang::dyn_cast<clang::BuiltinType const >(Expr->getType().getTypePtr())) {
             if (Expr->isRValue()) {
                 return true;
             }
             else if (Expr->getType().isConstQualified()) {
                 return true;
+            }
+
+            llvm::errs() << "builtin type ";
+            BuiltinType->dump();
+            if (Stmt) {
+                Stmt->dump();
             }
         }
         else if (Expr->getType().getTypePtr()->isRecordType()) {
@@ -287,6 +294,8 @@ bool MethodAnalysis::VisitCXXThisExpr(clang::CXXThisExpr const * const CXXThisEx
             }
         }
         else {
+            llvm::errs() << "Unknown typeclass " << Expr->getType().getTypePtr()->getTypeClassName() << "\n";
+            Expr->getType().dump();
             break;
         }
     }
