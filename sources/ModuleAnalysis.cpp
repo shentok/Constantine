@@ -262,22 +262,9 @@ class AnalyseVariableUsage
     : public ModuleVisitor {
 private:
     void OnFunctionDecl(clang::FunctionDecl const * const F) {
-        ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()));
-        boost::for_each(GetVariablesFromContext(F),
-            std::bind(&PseudoConstnessAnalysisState::Eval, &State, std::cref(Analysis), std::placeholders::_1));
     }
 
     void OnCXXMethodDecl(clang::CXXMethodDecl const * const F) {
-        clang::CXXRecordDecl const * const Parent = F->getParent();
-        clang::CXXRecordDecl const * const RecordDecl =
-            Parent->hasDefinition() ? Parent->getDefinition() : Parent->getCanonicalDecl();
-        Variables const MemberVariables = GetMemberVariablesAndReferences(RecordDecl, F);
-        // check variables first,
-        ScopeAnalysis const & Analysis = ScopeAnalysis::AnalyseThis(*(F->getBody()));
-        boost::for_each(GetVariablesFromContext(F, (! IsJustAMethod(F))),
-            std::bind(&PseudoConstnessAnalysisState::Eval, &State, std::cref(Analysis), std::placeholders::_1));
-        boost::for_each(MemberVariables,
-            std::bind(&PseudoConstnessAnalysisState::Eval, &State, std::cref(Analysis), std::placeholders::_1));
         // then check the method itself.
         if ((! F->isVirtual()) &&
             (! F->isStatic()) &&
@@ -301,7 +288,6 @@ private:
     }
 
     void Dump(clang::DiagnosticsEngine & DE) const {
-        State.GenerateReports(DE);
         boost::for_each(ConstCandidates | boost::adaptors::filtered(IsItFromMainModule()),
             std::bind(ReportFunctionPseudoConstness, std::ref(DE), std::placeholders::_1));
         boost::for_each(StaticCandidates | boost::adaptors::filtered(IsItFromMainModule()),
@@ -316,7 +302,6 @@ private:
     };
 
 private:
-    PseudoConstnessAnalysisState State;
     Methods ConstCandidates;
     Methods StaticCandidates;
 };
