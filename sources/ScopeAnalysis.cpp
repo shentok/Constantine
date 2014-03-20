@@ -307,7 +307,14 @@ bool MethodAnalysis::VisitCXXThisExpr(clang::CXXThisExpr const * const CXXThisEx
     }
 
     m_isConst = false;
-    return false;
+    return true;
+}
+
+bool MethodAnalysis::VisitDeclRefExpr(clang::DeclRefExpr const * const DeclRefExpr)
+{
+    DeclRefExpr->dump();
+
+    return true;
 }
 
 bool MethodAnalysis::isConst() const

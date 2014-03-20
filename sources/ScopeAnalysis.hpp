@@ -57,6 +57,9 @@ public:
 
     bool VisitCXXThisExpr(clang::CXXThisExpr const * const);
 
+    bool VisitDeclRefExpr(clang::DeclRefExpr const * const);
+
+
     bool isConst() const;
 
 private:

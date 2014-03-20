@@ -262,6 +262,10 @@ class AnalyseVariableUsage
     : public ModuleVisitor {
 private:
     void OnFunctionDecl(clang::FunctionDecl const * const F) {
+        F->dump();
+        const clang::ParentMap ParentMap(F->getBody());
+        MethodAnalysis Analysis(&ParentMap);
+        Analysis.TraverseStmt(F->getBody());
     }
 
     void OnCXXMethodDecl(clang::CXXMethodDecl const * const F) {
