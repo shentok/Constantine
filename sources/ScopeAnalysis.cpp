@@ -281,6 +281,11 @@ bool MethodAnalysis::VisitCXXThisExpr(clang::CXXThisExpr const * const CXXThisEx
                 return true;
             }
         }
+        else if (Expr->getType().getTypePtr()->isRecordType()) {
+            if (Expr->getType().isConstQualified()) {
+                return true;
+            }
+        }
         else {
             break;
         }
