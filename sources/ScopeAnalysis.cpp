@@ -249,8 +249,14 @@ bool MethodAnalysis::VisitCXXThisExpr(clang::CXXThisExpr const * const CXXThisEx
         }
         else if (clang::MemberExpr const * const MemberExpr = clang::dyn_cast<clang::MemberExpr const>(Stmt)) {
             if (clang::CXXMethodDecl const * const CXXMethodDecl = clang::dyn_cast<clang::CXXMethodDecl const>(MemberExpr->getMemberDecl())) {
-                m_isConst &= CXXMethodDecl->isConst();
-                return true;
+                llvm::errs() << CXXMethodDecl->size_overridden_methods() << "\n";
+                for (clang::CXXMethodDecl::method_iterator it = CXXMethodDecl->begin_overridden_methods(); it != CXXMethodDecl->end_overridden_methods(); ++it) {
+                    (*it)->dump();
+                    if ((*it)->isConst()) {
+                        return true;
+                    }
+                }
+                m_isConst = false;
             }
 
             if (!clang::dyn_cast<clang::FieldDecl const>(MemberExpr->getMemberDecl())) {
