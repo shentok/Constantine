@@ -97,3 +97,25 @@ void ConstPointer::setPointer(int *pointer)
 {
     m_pointer = pointer;
 }
+
+
+struct ComplexType
+{
+    void foo();
+    void foo() const;
+};
+
+class Foo
+{
+public:
+    void useValue();
+
+private:
+    ComplexType m_value;
+};
+
+
+void Foo::useValue() // expected-warning {{function 'useValue' could be declared as const}}
+{
+    m_value.foo();
+}
