@@ -21,34 +21,9 @@
 
 #include <clang/AST/AST.h>
 
-#include <tuple>
-#include <list>
-#include <map>
-
-
-// Collect variable usages. One variable could have been used multiple
-// times with different constness of the given type.
-
-typedef std::tuple<clang::QualType, clang::SourceRange> UsageRef;
-typedef std::list<UsageRef> UsageRefs;
-typedef std::map<clang::DeclaratorDecl const *, UsageRefs> UsageRefsMap;
-
-void Register(
-        UsageRefsMap & Results,
-        clang::Expr const * const Stmt,
-        clang::QualType const & Type = clang::QualType());
-
-
 struct IsItFromMainModule {
     bool operator()(clang::Decl const * const D) const {
         auto const & SM = D->getASTContext().getSourceManager();
         return SM.isInMainFile(D->getLocation());
     }
-    bool operator()(UsageRefsMap::value_type const & Var) const {
-        return this->operator()(Var.first);
-    }
 };
-
-void DumpUsageMapEntry(UsageRefsMap::value_type const & Var
-           , char const * const Message
-           , clang::DiagnosticsEngine & DE);
