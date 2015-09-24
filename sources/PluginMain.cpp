@@ -20,6 +20,7 @@
 #include "ModuleAnalysis.hpp"
 
 #include <iterator>
+#include <memory>
 
 #include "llvm/Support/CommandLine.h"
 
@@ -47,14 +48,15 @@ static char const * const plugin_name = "constantine";
 // to be a plugin. Parse command line arguments and dispatch the
 // real work to other classes.
 class Plugin
-    : public boost::noncopyable
-    , public clang::PluginASTAction {
+    : public clang::PluginASTAction {
 public:
     Plugin()
-        : boost::noncopyable()
-        , clang::PluginASTAction()
+        : clang::PluginASTAction()
         , Debug(PseudoConstness)
     { }
+
+    Plugin(Plugin const &) = delete;
+    Plugin & operator=(Plugin const &) = delete;
 
 private:
     // Decide wheater the compiler was invoked as C++ compiler or not.
@@ -64,10 +66,10 @@ private:
     }
 
     // ..:: Entry point for plugins ::..
-    clang::ASTConsumer * CreateASTConsumer(clang::CompilerInstance & C, llvm::StringRef) {
+    std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance & C, llvm::StringRef) {
         return IsCPlusPlus(C)
-            ? (clang::ASTConsumer *) new ModuleAnalysis(C, Debug)
-            : (clang::ASTConsumer *) new NullConsumer();
+            ? std::unique_ptr<clang::ASTConsumer>(new ModuleAnalysis(C, Debug))
+            : std::unique_ptr<clang::ASTConsumer>(new NullConsumer());
     }
 
     // ..:: Entry point for plugins ::..

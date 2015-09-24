@@ -25,7 +25,6 @@
 
 #include <clang/AST/AST.h>
 #include <clang/AST/RecursiveASTVisitor.h>
-#include <clang/Basic/Diagnostic.h>
 
 namespace clang {
     class ParentMap;
@@ -48,6 +47,14 @@ public:
 
     void DebugChanged(clang::DiagnosticsEngine &) const;
     void DebugReferenced(clang::DiagnosticsEngine &) const;
+
+public:
+    ScopeAnalysis() = default;
+    ScopeAnalysis(ScopeAnalysis &&) = default;
+    ScopeAnalysis & operator=(ScopeAnalysis &&) = default;
+
+    ScopeAnalysis(ScopeAnalysis const &) = delete;
+    ScopeAnalysis & operator=(ScopeAnalysis const &) = delete;
 
 private:
     UsageRefsMap Changed;
